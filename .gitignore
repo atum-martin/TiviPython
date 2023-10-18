@@ -6,6 +6,7 @@ epg.xml
 settings.json
 *.db
 *.m3u8
+.idea
 
 # C extensions
 *.so
