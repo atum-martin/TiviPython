@@ -34,7 +34,6 @@ def parseService(service):
     print('service '+id+' '+displayName)
     return (id, displayName)
 
-
 def parseEpgFile():
     tree = ET.parse('epg.xml')
     root = tree.getroot()
@@ -46,23 +45,28 @@ def parseEpgFile():
         if 'channel' in child.tag:
             services.append(parseService(child))
 
-    #services = M3UUtils.readM3U('input.m3u8')
-    xstream = XtreamCodesUtils.XtreamCodes()
-    xstream.readServerConfig()
+    print('progs: ' + str(len(programmes)))
+    cur.executemany("INSERT INTO epg VALUES(?, ?, ?, ?, ?)", programmes)
+    con.commit()
+
+def parseXtreamServices():
     services = xstream.getLiveServices()
     servicesCategories = xstream.getLiveCategories()
-
-    print('progs: '+str(len(programmes)))
+    # services = M3UUtils.readM3U('input.m3u8')
     print('services: ' + str(len(services)))
     cur = con.cursor()
     cur.executemany("INSERT INTO live_service VALUES(?, ?, ?, ?, ?)", services)
     cur.executemany("INSERT INTO live_category VALUES(?, ?, ?)", servicesCategories)
-    cur.executemany("INSERT INTO epg VALUES(?, ?, ?, ?, ?)", programmes)
     con.commit()
 
 if __name__ == '__main__':
     print('PyCharm')
     createTables()
+    xstream = XtreamCodesUtils.XtreamCodes()
+    xstream.readServerConfig()
+    xstream.downloadEpg()
+    parseEpgFile()
+    xstream.downloadEpgSource('https://raw.githubusercontent.com/atum-martin/astraepg/main/epg.xml')
     parseEpgFile()
     con.close()
 

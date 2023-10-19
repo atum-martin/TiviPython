@@ -8,6 +8,10 @@ class XtreamCodes:
     password = None
     baseUrl = None
     streamBaseUrl = None
+    epgUrl = None
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.79 Safari/537.36 DMOST/2.0.0 (; LGE; webOSTV; WEBOS6.3.2 03.34.95; W6_lm21a;)'
+    }
 
     def readServerConfig(self):
         f = open('settings.json')
@@ -16,15 +20,13 @@ class XtreamCodes:
         self.username = data['username']
         self.password = data['password']
         self.baseUrl = self.host+'/player_api.php?username='+self.username+'&password='+self.password+'&action='
+        self.epgUrl = self.host + '/xmltv.php?username=' + self.username + '&password=' + self.password
         self.streamBaseUrl = self.host+'/'+self.username+'/'+self.password+'/'
         f.close()
 
     def getXtreamApi(self, path):
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.79 Safari/537.36 DMOST/2.0.0 (; LGE; webOSTV; WEBOS6.3.2 03.34.95; W6_lm21a;)'
-        }
         print(self.baseUrl, path)
-        x = requests.get(self.baseUrl+path, headers=headers)
+        x = requests.get(self.baseUrl+path, headers=self.headers)
         print(str(x.status_code))
         return x.json()
 
@@ -57,6 +59,16 @@ class XtreamCodes:
 
     def getVodInfo(self, vodId):
         return self.getXtreamApi('get_vod_info&vod_id='+str(vodId))
+
+    def downloadEpg(self):
+        self.downloadEpgSource(self.epgUrl)
+
+    def downloadEpgSource(self, downloadUrl):
+        x = requests.get(downloadUrl, headers=self.headers)
+        print(str(x.status_code))
+        with open("epg.xml", mode="wb") as file:
+            file.write(x.content)
+        print('epg downloaded and written')
 
     def getLiveServices(self):
         liveStreams = self.getLiveStreams()
