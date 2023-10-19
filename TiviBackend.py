@@ -12,13 +12,13 @@ def countRows():
 def getServices():
     cur = con.cursor()
     services = []
-    res = cur.execute("SELECT * FROM service")
+    res = cur.execute("SELECT * FROM live_service INNER JOIN live_category ON live_service.group_id = live_category.id ORDER BY live_category.id ASC, live_service.id ASC")
     i = 100
     for row in res:
         i += 1
         thisService = {
-            "channelid": row['id'],
-            "channelname": row['title'],
+            "channelid": row[0],
+            "channelname": row[1],
             "channeldescription": "",
             "lcn": i,#skyId
             "logourl": "",
@@ -51,5 +51,6 @@ def getEpg(channelIds):
 if __name__ == '__main__':
     print('PyCharm')
     countRows()
-    print(str(getEpg(['de.Sky Cinema Hits'])))
+    print(str(getServices()))
+    #print(str(getEpg(['de.Sky Cinema Hits'])))
 

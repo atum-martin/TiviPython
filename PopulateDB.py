@@ -6,6 +6,14 @@ import XtreamCodesUtils
 con = sqlite3.connect("tivi.db")
 cur = con.cursor()
 
+def truncateEpgTable():
+    try:
+        cur.execute("DELETE FROM epg")
+        con.commit()
+    except:
+        print("tables don't exist")
+
+
 def createTables():
     try:
         cur.execute("DROP TABLE live_service")
@@ -14,7 +22,7 @@ def createTables():
     except:
         print("tables don't exist")
 
-    cur.execute("CREATE TABLE live_service(id, name, logo, groupName, url)")
+    cur.execute("CREATE TABLE live_service(id, name, logo, group_id, url)")
     cur.execute("CREATE TABLE live_category(id, name, priority)")
     cur.execute("CREATE TABLE epg(channelId, start, stop, title, desc)")
     cur.fetchall()
@@ -49,7 +57,7 @@ def parseEpgFile():
     cur.executemany("INSERT INTO epg VALUES(?, ?, ?, ?, ?)", programmes)
     con.commit()
 
-def parseXtreamServices():
+def parseXtreamServices(xstream):
     services = xstream.getLiveServices()
     servicesCategories = xstream.getLiveCategories()
     # services = M3UUtils.readM3U('input.m3u8')
@@ -61,9 +69,11 @@ def parseXtreamServices():
 
 if __name__ == '__main__':
     print('PyCharm')
-    createTables()
+    #createTables()
+    truncateEpgTable()
     xstream = XtreamCodesUtils.XtreamCodes()
     xstream.readServerConfig()
+    #parseXtreamServices(xstream)
     xstream.downloadEpg()
     parseEpgFile()
     xstream.downloadEpgSource('https://raw.githubusercontent.com/atum-martin/astraepg/main/epg.xml')
