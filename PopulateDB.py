@@ -1,18 +1,21 @@
 import sqlite3
 import xml.etree.ElementTree as ET
 import M3UUtils
+import XtreamCodesUtils
 
 con = sqlite3.connect("tivi.db")
 cur = con.cursor()
 
 def createTables():
     try:
-        cur.execute("DROP TABLE service")
+        cur.execute("DROP TABLE live_service")
         cur.execute("DROP TABLE epg")
+        cur.execute("DROP TABLE live_category")
     except:
         print("tables don't exist")
 
-    cur.execute("CREATE TABLE service(id, name, logo, groupName, url)")
+    cur.execute("CREATE TABLE live_service(id, name, logo, groupName, url)")
+    cur.execute("CREATE TABLE live_category(id, name, priority)")
     cur.execute("CREATE TABLE epg(channelId, start, stop, title, desc)")
     cur.fetchall()
 
@@ -43,12 +46,17 @@ def parseEpgFile():
         if 'channel' in child.tag:
             services.append(parseService(child))
 
-    services = M3UUtils.readM3U('input.m3u8')
+    #services = M3UUtils.readM3U('input.m3u8')
+    xstream = XtreamCodesUtils.XtreamCodes()
+    xstream.readServerConfig()
+    services = xstream.getLiveServices()
+    servicesCategories = xstream.getLiveCategories()
 
     print('progs: '+str(len(programmes)))
     print('services: ' + str(len(services)))
     cur = con.cursor()
-    cur.executemany("INSERT INTO service VALUES(?, ?, ?, ?, ?)", services)
+    cur.executemany("INSERT INTO live_service VALUES(?, ?, ?, ?, ?)", services)
+    cur.executemany("INSERT INTO live_category VALUES(?, ?, ?)", servicesCategories)
     cur.executemany("INSERT INTO epg VALUES(?, ?, ?, ?, ?)", programmes)
     con.commit()
 

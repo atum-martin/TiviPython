@@ -7,6 +7,7 @@ class XtreamCodes:
     username = None
     password = None
     baseUrl = None
+    streamBaseUrl = None
 
     def readServerConfig(self):
         f = open('settings.json')
@@ -15,6 +16,7 @@ class XtreamCodes:
         self.username = data['username']
         self.password = data['password']
         self.baseUrl = self.host+'/player_api.php?username='+self.username+'&password='+self.password+'&action='
+        self.streamBaseUrl = self.host+'/'+self.username+'/'+self.password+'/'
         f.close()
 
     def getXtreamApi(self, path):
@@ -30,7 +32,13 @@ class XtreamCodes:
         return self.getXtreamApi('get_vod_categories')
 
     def getLiveCategories(self):
-        return self.getXtreamApi('get_live_categories')
+        liveCategories = self.getXtreamApi('get_live_categories')
+        outputList = []
+        priority = 0
+        for category in liveCategories:
+            priority = priority + 1
+            outputList.append((category['category_id'], category['category_name'], priority))
+        return outputList
 
     def getVodStreams(self):
         return self.getXtreamApi('get_vod_streams')
@@ -38,8 +46,30 @@ class XtreamCodes:
     def getLiveStreams(self):
         return self.getXtreamApi('get_live_streams')
 
+    def getSeriesCategories(self):
+        return self.getXtreamApi('get_series_categories')
+
+    def getSeries(self):
+        return self.getXtreamApi('get_series')
+
+    def getSeriesInfo(self, seriesId):
+        return self.getXtreamApi('get_series_info&series_id='+str(seriesId))
+
+    def getVodInfo(self, vodId):
+        return self.getXtreamApi('get_vod_info&vod_id='+str(vodId))
+
+    def getLiveServices(self):
+        liveStreams = self.getLiveStreams()
+        services = []
+        for service in liveStreams:
+            serviceUrl = self.streamBaseUrl+str(service['stream_id'])
+            serviceEntry = (service['epg_channel_id'], service['name'], service['stream_icon'], service['category_id'], serviceUrl)
+            services.append(serviceEntry)
+        return services
+
 if __name__ == '__main__':
     print('PyCharm')
     xstream = XtreamCodes()
     xstream.readServerConfig()
-    print(str(xstream.getVodStreams()))
+    print(str(xstream.getLiveCategories()))
+    #print(str(xstream.getSeriesInfo(17470)))
