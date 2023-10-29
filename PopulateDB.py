@@ -1,8 +1,12 @@
+import re
 import sqlite3
 import xml.etree.ElementTree as ET
 import M3UUtils
 import XtreamCodesUtils
 import os
+from dateutil.parser import parse
+import pytz
+import datetime
 
 dbExists = os.path.isfile("tivi.db")
 
@@ -35,8 +39,8 @@ def parseProgramme(prog):
     title = prog.find('title').text
     desc = prog.find('desc').text
     channel = prog.get('channel')
-    start = prog.get('start')
-    stop = prog.get('stop')
+    start = parseTimestamp(prog.get('start'))
+    stop = parseTimestamp(prog.get('stop'))
     #print('programme '+channel+' '+start)
     return (channel, start, stop, title, desc)
 
@@ -64,7 +68,27 @@ def parseEpgFile():
 def getServicesCount():
     res = cur.execute("SELECT count(*) FROM live_service")
     result = res.fetchone()
-    return int(result[0][0])
+    return int(result[0])
+
+
+pp = re.compile(r'(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2}) (\+|\-)(\d{2})(\d{2})')
+def parseTimestamp(timeStr):
+    #20231019193000 +0200
+
+    match = pp.match(timeStr).groups()
+    # datetime(year, month, day, hour, minute, second, microsecond)
+    timeOffset = (int(match[7])*60*60)
+
+    b = datetime.datetime(int(match[0]), int(match[1]), int(match[2]), int(match[3]), int(match[4]), int(match[5]), 0, pytz.timezone('UTC'))
+    returnTime = b.timestamp()
+    if match[6] == '+':
+        returnTime = returnTime - timeOffset
+    else:
+        returnTime = returnTime + timeOffset
+
+    #datetime2 = parse(timeStr, fuzzy=True)
+    #print(str(datetime2.timestamp()))
+    return returnTime
 
 def parseXtreamServices(xstream):
     print('downloading services and cats')
@@ -91,3 +115,4 @@ def populateDatabase():
     parseEpgFile()
     con.close()
 
+#parseTimestamp('20231019193000 +0200')

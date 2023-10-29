@@ -64,6 +64,7 @@ class XtreamCodes:
         self.downloadEpgSource(self.epgUrl)
 
     def downloadEpgSource(self, downloadUrl):
+        print('Downloading xtream codes epg, this may take some time.')
         x = requests.get(downloadUrl, headers=self.headers)
         print(str(x.status_code))
         with open("epg.xml", mode="wb") as file:

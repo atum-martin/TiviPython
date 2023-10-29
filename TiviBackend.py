@@ -5,6 +5,8 @@ import http.server
 import socketserver
 import subprocess
 import threading
+import time
+
 import PopulateDB
 from urllib.parse import urlparse, parse_qs
 from dateutil.parser import parse
@@ -134,15 +136,19 @@ def getServicesForEpg(category):
     services = []
     res = cur.execute("SELECT live_service.id FROM live_service INNER JOIN live_category ON live_service.group_id = live_category.id WHERE live_category.id = '"+category+"' ORDER BY live_category.id ASC, live_service.id ASC")
     for row in res:
-        services.append(row[0])
+        if row[0] != '' and row[0] not in services:
+            services.append(row[0])
     return services
 
 def getEpgAllGroup(category):
     cur = con.cursor()
     epg = []
     channelIds = getServicesForEpg(category)
-
-    sql = "SELECT * FROM epg WHERE channelId IN ({seq}) and start >= '20231028' and start < '20231030' ORDER BY channelId, start ASC".format(seq=','.join(['?'] * len(channelIds)))
+    startTime = str(int(time.time() - (8*60*60)))
+    endTime = str(int(time.time() + (32 * 60 * 60)))
+    print('epg: '+startTime+' '+endTime)
+    print('epg channel ids: '+str(channelIds))
+    sql = "SELECT * FROM epg WHERE start >= "+startTime+" and start <= "+endTime+" and channelId IN ({seq}) ORDER BY channelId, start ASC".format(seq=','.join(['?'] * len(channelIds)))
     res = cur.execute(sql, channelIds)
     currentChannelId = ''
     currentChannelEpg = []
@@ -156,8 +162,8 @@ def getEpgAllGroup(category):
         #channelId, start, stop, title, desc
         thisEpg = {
             "channelId": row[0],
-            "start": parseTimestamp(row[1]),
-            "stop": parseTimestamp(row[2]),
+            "start": row[1],
+            "stop": row[2],
             "title": row[3],
             "desc": row[4]
         }
@@ -173,7 +179,7 @@ def parseTimestamp(timeStr):
 def getEpg(channelIds):
     cur = con.cursor()
     services = []
-    sql = "SELECT * FROM epg WHERE channelId IN ({seq}) and start >= '20231028' and start < '20231030' ORDER BY channelId, start DESC".format(seq=','.join(['?'] * len(channelIds)))
+    sql = "SELECT * FROM epg WHERE channelId IN ({seq}) and start >= '20231028' and start <= '20231031' ORDER BY channelId, start DESC".format(seq=','.join(['?'] * len(channelIds)))
     res = cur.execute(sql, channelIds)
     i = 100
     for row in res:
