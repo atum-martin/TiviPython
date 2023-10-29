@@ -8,7 +8,6 @@
 <link rel="stylesheet" href="app.css">
 
 <script src="https:////ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/json2html/2.1.0/json2html.min.js"></script>
 </head>
 
 
@@ -34,22 +33,23 @@ Search</label>
 </form>
 </div>
 </div>
- <div class="w-full overflow-x-scroll relative h-[calc(100vh-60px)] pb-4">
+ <div id="testdiv1" class="w-full overflow-x-scroll relative h-[calc(100vh-60px)] pb-4">
 <div class="space-y-1 flex flex-col relative">
 <div class="table">
 <div class="flex flex-col">
 <div class="flex sticky top-0 bg-default-900 z-30">
 <div class="sticky left-0 bg-default-900 z-10 w-[200px] h-[40px]">
-<div class="relative" style="width: 100%; height: 40px;">
-<button class="px-3 py-2 rounded border-0 text-muted-50 outline-none flex items-center text-left justify-between" style="width: 100%; height: 40px;">
+<div id="groupbox" class="relative" style="width: 100%; height: 40px;">
+<button class="px-3 py-2 rounded border-0 text-muted-50 outline-none flex items-center text-left justify-between" style="width: 100%; height: 40px;" onclick="loadGroups()">
 <div class="leading-4">
-Yesterday<br>
-Oct 17, 2023</div>
+Groups</div>
  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
 <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5">
 </path>
 </svg>
 </button>
+
+
  </div>
 </div>
  <div id="timeline" >
@@ -62,6 +62,20 @@ Oct 17, 2023</div>
 
  <div id="serviceslist" />
 <script>
+	var groupId = -1;
+	async function loadGroups() {
+		const response = await fetch('backend.json?action=get_cats');
+		const data = await response.json();
+		console.log(data);
+		outputHtml = '<div class="w-full absolute top-0 rounded border border-default-600 z-10 overflow-hidden max-h-[800px] overflow-y-scroll">';
+		for (let i = 0; i < data.length; i++) { 
+			outputHtml += '<button onClick="chooseGroup(\''+data[i]['id']+'\',\''+data[i]['name']+'\')" class="block bg-default-900 text-white px-3 py-2 text-left hover:bg-default-500 svelte-760dkd" style="width: 100%; height: 40px;">'+data[i]['name']+'</button>';
+		}
+		outputHtml += '</div>';
+		var wrapper = document.getElementById("groupbox");
+		wrapper.innerHTML = outputHtml
+	}
+
 
 	function roundToNearest30(date = new Date()) {
 		const minutes = 30;
@@ -79,18 +93,23 @@ Oct 17, 2023</div>
 		//return 400;
 	}
 	
-	function openPlayer(url) {
-		var wrapper = document.getElementById("message2");
-		var url = 'videoplayer.html?video='+url
-		wrapper.innerHTML = '<iframe width="560" height="315" src="'+url+'" frameborder="0" allowfullscreen></iframe>'
-		$(".mask").show();
-		//var win = window.open();
-		//win.document.write('<iframe width="560" height="315" src="'+url+'" frameborder="0" allowfullscreen></iframe>');
-	}
+	async function openPlayer(url) {
+		//var wrapper = document.getElementById("message2");
+		//var url = 'videoplayer.html?video='+url
+		//wrapper.innerHTML = '<iframe width="560" height="315" src="'+url+'" frameborder="0" allowfullscreen></iframe>'
+		//$(".mask").show();
+
+		var url = 'stream?video='+url
+		const response = await fetch(url);
+		const data = await response.json(); 
+	};
 	
 	var sixHoursAgo = new Date(currentTime - (6*60*60*1000));
 	var thirtyTwoHoursAhead = new Date(currentTime + (32*60*60*1000));
 	var thirtyMins = (30*60*1000);
+	
+	var sixHoursAgoSeconds = sixHoursAgo.getTime() / 1000;
+	var thirtyTwoHoursAheadSeconds = thirtyTwoHoursAhead.getTime() / 1000;
 	console.log(currentTime);
 	console.log(sixHoursAgo);
 	console.log(thirtyTwoHoursAhead);
@@ -105,55 +124,88 @@ Oct 17, 2023</div>
 	wrapper.innerHTML = timeline
 	
     $(async function onLoad(){
-        
-		const response = await fetch('backend.json?action=get_services');
+		onLoad2();
+	});
+	async function onLoad2() {
+        servicesUrl = 'backend.json?action=get_services';
+		if (groupId > 0) servicesUrl += '&category='+groupId;
+		const response = await fetch(servicesUrl);
 		const data = await response.json(); 
 		//console.log(data);
+		
+		epgUrl = 'backend.json?action=get_epg';
+		if (groupId > 0) epgUrl += '&category='+groupId;
+		const response2 = await fetch(epgUrl);
+		const data2 = await response2.json();
+		const epgMap = new Map();
+		console.log(data2);
 
-		let epg = [];
+		for (let i = 0; i < data2.length; i++) {
+		     epgMap.set(data2[i]['channel_id'], data2[i]['epg']);
+		}
 		for (let i = 0; i < data.length; i++) {
-			if(data[i]['channel_id'] == "") continue;
-			const response = await fetch('backend.json?action=get_epg&channel_id='+data[i]['channel_id']);
-			const data2 = await response.json(); 
-			data[i]["epg"] = data2
+		     if(data[i]['channel_id'] == '') continue;
+		     data[i]['epg'] = epgMap.get(data[i]['channel_id']);
 		}
 		console.log(data);
-		
-		json2html.component.add({
-		
-			"service/info":{'<>':'div','class':'sticky left-0 pr-[1px] z-20 bg-default-900 border-b-[4px] border-default-900','html':[
-                {'<>':'div','class':'bg-default-800 rounded-sm text-white w-[200px] shrink-0 flex space-x-3 items-center px-3 py-2 h-[80px]','html':[
-					{'<>':'div','class':'w-[48px] h-[25px] flex justify-center items-center shrink-0','html':[
-						{'<>':'img','src':'${logo}','class':'max-w-[60px] max-h-[60px]','loading':'lazy','referrerpolicy':'no-referrer','alt':'${channel_name}'}
-					]},
-					{'<>':'div','html':[
-						{'<>':'a','href':'javascript:openPlayer\("${url}"\)','html':'${channel_name}'}
-					]}
-				]}
-            ]},
-			"service/epg":{"[]":"service/singleepg","{}":o=>o.epg},
-			
-			"service/singleepg":{'<>':'div','class':'flex relative w-full border-b-[4px] border-default-900','html':[
+		var thisTime = (new Date().getTime() / 1000);
+		let outputHtml = '';
+		for (let i = 0; i < data.length; i++) {
+		    outputHtml += '<div class="flex">';
+            outputHtml += '<div class="sticky left-0 pr-[1px] z-20 bg-default-900 border-b-[4px] border-default-900">';
+             outputHtml += '<div class="bg-default-800 rounded-sm text-white w-[300px] shrink-0 flex space-x-3 items-center px-3 py-2 h-[80px]" style="min-width: 300px; min-height: 100px">';
+              outputHtml += '<div class="w-[48px] h-[25px] flex justify-center items-center shrink-0">';
+               outputHtml += '<img src="'+data[i]['logo']+'" class="max-w-[60px] max-h-[60px]" loading="lazy" referrerpolicy="no-referrer" alt="'+data[i]['channel_name']+'" />';
+              outputHtml += '</div>';
+              outputHtml += '<div><a href="javascript:openPlayer(\''+data[i]['url']+'\')">'+data[i]['channel_name']+'</a></div>';
+             outputHtml += '</div>';
+            outputHtml += '</div>';
 
-				{'<>':'div','class':'px-[2px] shrink-0 absolute h-[52px] cursor-default" style="max-width: 780px; width: 780px; min-width: 780px; left: 300;','html':[
-					{'<>':'div','class':'bg-default-700 rounded-sm py-2 overflow-hidden transition-colors duration-100 svelte-1o2ja8p','html':[
-						{'<>':'div','class':'text-white whitespace-nowrap px-3','html':'Test123 ${title}'},
-						{'<>':'div','class':'text-muted-200 whitespace-nowrap px-3','html':'Hello123 ${start}'}
-					]}
-				]}
-			]}
-		});
-		
-		let template = {'service':{'<>':'div','class':'flex','html':[
-            {"[]":"service/info"},
-			{"[]":"service/epg"}
-		]}};
-		
+            //outputHtml += '<div class="rounded-sm bg-default-700 w-[calc(100vw-204px)] h-[80px] sticky left-[204px] flex items-center text-white px-3">Loading...</div>';
 
-        $('#serviceslist').json2html(data,template.service);
+            if(data[i]['epg'] === undefined){
+             //{'<>':'div','class':'rounded-sm bg-default-700 w-[calc(100vw-204px)] h-[80px] sticky left-[204px] flex items-center text-white px-3','html':'Loading...'}
+             outputHtml += '<div class="rounded-sm bg-default-700 w-[calc(100vw-204px)] h-[80px] sticky left-[204px] flex items-center text-white px-3">Loading...</div>';
+            } else {
+				for (let j = 0; j < data[i]['epg'].length; j++) {
+					let start = data[i]['epg'][j]['start'];
+					let stop = data[i]['epg'][j]['stop'];
+					var duration = Math.min((stop - start), (stop-sixHoursAgoSeconds));
+					if (stop < sixHoursAgoSeconds) continue;
+					if (start > thirtyTwoHoursAheadSeconds) continue;
+					var startPixel = 204 + ((start - sixHoursAgoSeconds ) / 10);
+					var pixelWidth = (duration/10);//divide 60x6 pixels
+					if ( startPixel < 204) startPixel = 204;
+					outputHtml += '<div class="px-[2px] shrink-0 absolute h-[52px] cursor-default" style="max-width: '+pixelWidth+'px; width: '+pixelWidth+'px; min-width: '+pixelWidth+'px; left: '+startPixel+'; min-height: 100px;">';
+					if (stop >= thisTime && thisTime >= start ) {
+						outputHtml += '<div class="bg-default-700 rounded-sm py-2 overflow-hidden transition-colors duration-100 svelte-1o2ja8p active" style="min-height: 100px;">';
+						outputHtml += '<div class="text-white whitespace-nowrap px-3"><a href="javascript:openPlayer(\''+data[i]['url']+'\')">'+data[i]['epg'][j]['title']+'</a></div>';
+					} else {
+						outputHtml += '<div class="bg-default-700 rounded-sm py-2 overflow-hidden transition-colors duration-100 svelte-1o2ja8p" style="min-height: 100px;">';
+						outputHtml += '<div class="text-white whitespace-nowrap px-3">'+data[i]['epg'][j]['title']+'</div>';
+					}
+					outputHtml += '<div class="text-muted-200 whitespace-nowrap px-3">'+(duration / 60)+'mins</div>';
+					outputHtml += '</div></div>';
+				}
+            }
+
+         outputHtml += '</div>';
+        }
+
+        var wrapper = document.getElementById("serviceslist");
+	    wrapper.innerHTML = outputHtml
 		
-    });
-    				//{'<>':'div','class':'rounded-sm bg-default-700 w-[calc(100vw-204px)] h-[80px] sticky left-[204px] flex items-center text-white px-3','html':'Loading...'}
+    }
+	
+		
+	async function chooseGroup(id, groupName) {
+		outputHtml = '<button class="px-3 py-2 rounded border-0 text-muted-50 outline-none flex items-center text-left justify-between" style="width: 100%; height: 40px;" onclick="loadGroups()"><div class="leading-4">'+groupName+'</div> <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path></svg></button>';
+		var wrapper = document.getElementById("groupbox");
+		wrapper.innerHTML = outputHtml
+		groupId = id;
+		onLoad2();
+		updateScrollLocation();
+	}
 				
 </script>
 </div>
@@ -171,8 +223,19 @@ Oct 17, 2023</div>
 			wrapper.innerHTML = '<div class="absolute top-[36px] bottom-0 w-[1px] bg-accent z-10" style="left: '+timelinePosition()+'px;" ></div>'
 		}
 		updateTimelinebar();
+		function updateScrollLocation() {
+			const root = document.getElementById('testdiv1');
+			root.scrollTo({
+				top: 0,
+				left: timelinePosition()-1000,
+				behavior: 'smooth',
+			});
+		}
+		updateScrollLocation();
+		//window.scrollTo(800, 800);
 		setInterval(function() {
 			updateTimelinebar();
+			//document.body.scrollTo(timelinePosition(), 0);
 		}, 60 * 1000);
 </script>
 </body>

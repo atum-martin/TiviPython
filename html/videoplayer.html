@@ -1,20 +1,20 @@
-<head>
-  <link href="https://vjs.zencdn.net/8.6.0/video-js.css" rel="stylesheet" />
-
-  <!-- If you'd like to support IE8 (for Video.js versions prior to v7) -->
-  <!-- <script src="https://vjs.zencdn.net/ie8/1.1.2/videojs-ie8.min.js"></script> -->
-</head>
-
-<body>
-<div id="videoplayer"></div>
+<script src="mpegts.js"></script>
+<video id="videoElement"></video>
 <script>
   const queryString = window.location.search;
   const urlParams = new URLSearchParams(queryString);
   const videoUrl = urlParams.get('video')
 
-  var videoHtml = '<video id="my-video" class="video-js" controls preload="auto" width="640" height="264" poster="MY_VIDEO_POSTER.jpg" data-setup="{}"><source src="stream?video='+videoUrl+'" type="application/x-mpegURL" /><p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that<a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a></p></video>'
-  var wrapper = document.getElementById("videoplayer");
-  wrapper.innerHTML = videoHtml
+
+    if (mpegts.getFeatureList().mseLivePlayback) {
+        var videoElement = document.getElementById('videoElement');
+        var player = mpegts.createPlayer({
+            type: 'mpegts',  // could also be mpegts, m2ts, flv
+            isLive: true,
+            url: videoUrl
+        });
+        player.attachMediaElement(videoElement);
+        player.load();
+        player.play();
+    }
 </script>
-  <script src="https://vjs.zencdn.net/8.6.0/video.min.js"></script>
-</body>
